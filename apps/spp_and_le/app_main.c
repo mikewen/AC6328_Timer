@@ -176,7 +176,7 @@ void checkBat(){    // adc_get_voltage(AD_CH_VBAT)*4/10
 }
 */
 
-static u16 timerID, stopTimerID;
+static u16 timerID, startTimerID, stopTimerID;
 void initUSBPorts(){
     gpio_set_dieh(IO_PORT_DM, 0);gpio_set_die(IO_PORT_DM, 1);gpio_set_pull_down(IO_PORT_DM, 0);gpio_set_pull_up(IO_PORT_DM, 0);
     gpio_set_dieh(IO_PORT_DP, 0);gpio_set_die(IO_PORT_DP, 1);gpio_set_pull_down(IO_PORT_DP, 0);gpio_set_pull_up(IO_PORT_DP, 0);
@@ -187,10 +187,30 @@ void endRelayFunc(){
     sys_timeout_del(timerID);
 }
 
+/*
+void timer_delay_ms(u8 ms)
+{
+    JL_TIMER2->CNT = 0;
+    JL_TIMER2->PRD = ms * (24000000L / 1000);
+    JL_TIMER2->CON = BIT(0) | (6 << 10) | BIT(14); //1分频,std 24m，24次就1us
+    while (!(JL_TIMER2->CON & BIT(15))); //等pending
+    JL_TIMER2->CON = 0;
+}
+*/
+
+void startPower(){
+    gpio_direction_output(IO_PORT_DM, 1); gpio_direction_output(IO_PORT_DP, 0);
+    timerID = sys_timeout_add(NULL, endRelayFunc, 50);
+    //timer_delay_ms(50);
+    //gpio_direction_output(IO_PORT_DM, 0); gpio_direction_output(IO_PORT_DP, 0);
+    sys_timeout_del(startTimerID);
+}
+
 void stopPower(){
-    gpio_set_pull_up(IO_PORTA_09, 0);gpio_set_pull_down(IO_PORTA_09, 1);
+    //gpio_set_pull_up(IO_PORTA_09, 0);gpio_set_pull_down(IO_PORTA_09, 1);
     gpio_direction_output(IO_PORT_DM, 0); gpio_direction_output(IO_PORT_DP, 1);
     timerID = sys_timeout_add(NULL, endRelayFunc, 50);
+    sys_timeout_del(stopTimerID);
     //power_set_soft_poweroff();
     sys_timeout_add(NULL, power_set_soft_poweroff, 500);
 }
@@ -208,17 +228,30 @@ REGISTER_LP_TARGET(idle_lp_target) = {
 
 #endif
 
+u8 minutes[1];
 void app_main()
 {
+    /*
+    if(!syscfg_read(RUN_MINUTES, minutes, 1)){
+        minutes[0] = 2;
+    }
+    */
+    syscfg_read(RUN_MINUTES, minutes, 1);
+    if(minutes[0]<2){
+        minutes[0] = 3;
+        syscfg_write(RUN_MINUTES, minutes, 1);
+    }
+
     initUSBPorts();
 #if(AUTO_RUN == 1)  // Also need to change sleep_enter_callback
     //gpio_set_pull_up(IO_PORTA_05, 1);gpio_set_pull_down(IO_PORTA_05, 0);    // Turn on pump
-    gpio_set_pull_up(IO_PORTA_09, 1);gpio_set_pull_down(IO_PORTA_09, 0);
+    //gpio_set_pull_up(IO_PORTA_09, 1);gpio_set_pull_down(IO_PORTA_09, 0);
 
     //timer_pwm_init(JL_TIMER0, 1000, 10000, IO_PORTA_05, 0);  //timer_pwm_init(JL_TIMER0, freq, duty, IO_PORTA_05, 0);
-    stopTimerID = sys_timeout_add(NULL, stopPower , 2*60000); // stop after x minutes
-    gpio_direction_output(IO_PORT_DM, 1); gpio_direction_output(IO_PORT_DP, 0);
-    timerID = sys_timeout_add(NULL, endRelayFunc, 50);
+    startTimerID = sys_timeout_add(NULL, startPower , 2000); // start power after few seconds
+    stopTimerID = sys_timeout_add(NULL, stopPower , minutes[0]*60000); // stop after x minutes
+    //gpio_direction_output(IO_PORT_DM, 1); gpio_direction_output(IO_PORT_DP, 0);
+    //timerID = sys_timeout_add(NULL, endRelayFunc, 50);
     //timerID = sys_timer_add(NULL, ledBlink , 1000); //every x seconds
 #endif
 

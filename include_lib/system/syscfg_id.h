@@ -132,6 +132,9 @@ u8 *syscfg_ptr_read(u16 item_id, u16 *len);
 //=================================================================================//
 #define 	CFG_STORE_VM_ONLY_BEGIN		50
 #define     AT_CHAR_DEV_NAME            51
+
+#define     RUN_MINUTES                 52
+
 #define 	CFG_STORE_VM_ONLY_END		99
 
 //=================================================================================//

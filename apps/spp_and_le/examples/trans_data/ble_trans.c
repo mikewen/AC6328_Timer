@@ -392,6 +392,7 @@ void updateRunTime(){
         sys_timer_del(timerID);
     }
 }
+static u8 minutes[1];
 
 /*************************************************************************************************/
 /*!
@@ -458,7 +459,12 @@ static uint16_t trans_att_read_callback(hci_con_handle_t connection_handle, uint
             //sprintf(buffer, "B%uV%u", adc_get_voltage(AD_CH_VBAT)*4/10, adc_get_voltage(AD_CH_PA3));  //test 钛酸锂电池 runtime, adc_get_voltage(AD_CH_VBAT) * 4 / 10
             // sprintf(buffer, "B%u", adc_get_voltage(AD_CH_VBAT)*4/10);
             //sprintf(buffer, "H%uV%u", adc_get_voltage(AD_CH_DM)*4/10, adc_get_voltage(AD_CH_PA3));
-            sprintf(buffer, "A%u", adc_sample(AD_CH_PA9));
+            //sprintf(buffer, "A%u", adc_sample(AD_CH_PA9));
+
+            if(!syscfg_read(RUN_MINUTES, minutes, 1)){
+                minutes[0] = 2;
+            }
+            sprintf(buffer, "T%u", minutes[0]);
 
             att_value_len = strlen(buffer);
 
@@ -585,6 +591,11 @@ static int trans_att_write_callback(hci_con_handle_t connection_handle, uint16_t
             }
             //if(strlen(buffer)>1){
             else{
+                //minutes = buffer[1]-48;
+                minutes[0] = buffer[1]-48;
+                //syscfg_write(RUN_MINUTES, &minutes, sizeof(minutes));
+                syscfg_write(RUN_MINUTES, minutes, 1);
+                /*
                 pwm = 1;
                 gpio_set_pull_up(IO_PORTB_05, 1);gpio_set_pull_down(IO_PORTB_05, 0);
                 u16 RelayDuty=1000*(buffer[1]-48);
@@ -592,6 +603,7 @@ static int trans_att_write_callback(hci_con_handle_t connection_handle, uint16_t
                 set_timer_pwm_duty(JL_TIMER1, RelayDuty);
                 //timer_pwm_init(JL_TIMER5, 1000, RelayDuty, IO_PORTB_07, 0);
                 //new_timer_pwm_init(JL_TIMER1, IO_PORTC_05, 1000, RelayDuty);
+                */
             }
         } else
         if(buffer[0]=='D'){

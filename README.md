@@ -1,2 +1,4 @@
-# AC63_BR25_EVSE
-AC6369  EVSE
+# AC6328_BR19_Timer
+
+Power Off after defined minutes
+
